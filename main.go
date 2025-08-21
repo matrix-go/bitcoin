@@ -5,19 +5,17 @@ import (
 )
 
 func main() {
-	bc := core.NewBlockchain()
+
+	blockchainAddress := "miner"
+	bc := core.NewBlockchain(blockchainAddress)
 	bc.Print()
 
 	bc.AddTransaction("A", "B", 10)
-	previousHash := bc.LastBlock().Hash()
-	nonce := bc.ProofOfWork()
-	bc.CreateBlock(nonce, previousHash)
+	bc.Mining()
 	bc.Print()
 
 	bc.AddTransaction("C", "D", 20)
 	bc.AddTransaction("X", "Y", 30)
-	previousHash = bc.LastBlock().Hash()
-	nonce = bc.ProofOfWork()
-	bc.CreateBlock(nonce, previousHash)
+	bc.Mining()
 	bc.Print()
 }

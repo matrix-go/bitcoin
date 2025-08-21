@@ -5,17 +5,23 @@ import (
 	"strings"
 )
 
-const MINING_DIFFICULTY = 3
+const (
+	KMiningDifficulty = 3
+	KMiningSender     = "COINBASE"
+	KMiningReward     = 20
+)
 
 type Blockchain struct {
-	transactionPool []*Transaction
-	chain           []*Block
+	transactionPool   []*Transaction
+	chain             []*Block
+	blockchainAddress string
 }
 
-func NewBlockchain() *Blockchain {
+func NewBlockchain(blockchainAddress string) *Blockchain {
 	bc := new(Blockchain)
 	bc.transactionPool = make([]*Transaction, 0)
 	bc.chain = make([]*Block, 0)
+	bc.blockchainAddress = blockchainAddress
 
 	// TODO: genesis block
 	b := &Block{}
@@ -68,10 +74,18 @@ func (bc *Blockchain) ProofOfWork() int {
 	previousHash := bc.LastBlock().Hash()
 
 	nonce := 0
-	for !bc.VerifyProof(nonce, previousHash, transactions, MINING_DIFFICULTY) {
+	for !bc.VerifyProof(nonce, previousHash, transactions, KMiningDifficulty) {
 		nonce++
 	}
 	return nonce
+}
+
+func (bc *Blockchain) Mining() bool {
+	bc.AddTransaction(KMiningSender, bc.blockchainAddress, KMiningReward)
+	nonce := bc.ProofOfWork()
+	previousHash := bc.LastBlock().Hash()
+	bc.CreateBlock(nonce, previousHash)
+	return true
 }
 
 func (bc *Blockchain) Print() {
