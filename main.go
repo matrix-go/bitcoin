@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/matrix-go/bitcoin/core"
 )
 
@@ -18,4 +19,7 @@ func main() {
 	bc.AddTransaction("X", "Y", 30)
 	bc.Mining()
 	bc.Print()
+
+	fmt.Printf("C: %d\n", bc.CalculateTotalAmount("C"))
+	fmt.Printf("D: %d\n", bc.CalculateTotalAmount("D"))
 }

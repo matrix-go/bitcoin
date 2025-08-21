@@ -42,7 +42,7 @@ func (bc *Blockchain) LastBlock() *Block {
 	return bc.chain[len(bc.chain)-1]
 }
 
-func (bc *Blockchain) AddTransaction(sender string, recipient string, value uint64) {
+func (bc *Blockchain) AddTransaction(sender string, recipient string, value int64) {
 	tx := NewTransaction(sender, recipient, value)
 	bc.transactionPool = append(bc.transactionPool, tx)
 }
@@ -86,6 +86,21 @@ func (bc *Blockchain) Mining() bool {
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
 	return true
+}
+
+func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) int64 {
+	var total int64
+	for _, block := range bc.chain {
+		for _, tx := range block.transactions {
+			if tx.recipient == blockchainAddress {
+				total += tx.value
+			}
+			if tx.sender == blockchainAddress {
+				total -= tx.value
+			}
+		}
+	}
+	return total
 }
 
 func (bc *Blockchain) Print() {

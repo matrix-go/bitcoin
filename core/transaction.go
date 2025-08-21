@@ -9,10 +9,10 @@ import (
 type Transaction struct {
 	sender    string
 	recipient string
-	value     uint64
+	value     int64
 }
 
-func NewTransaction(sender string, recipient string, value uint64) *Transaction {
+func NewTransaction(sender string, recipient string, value int64) *Transaction {
 	tx := new(Transaction)
 	tx.sender = sender
 	tx.recipient = recipient
@@ -25,7 +25,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Sender    string `json:"sender"`
 		Recipient string `json:"recipient"`
-		Value     uint64 `json:"value"`
+		Value     int64  `json:"value"`
 	}{
 		Sender:    t.sender,
 		Recipient: t.recipient,
