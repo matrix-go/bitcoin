@@ -50,6 +50,7 @@ func (s *Server) Start() error {
 	s.eg.GET("/transactions", s.handleGetTransactions)
 	// TODO: just for test
 	s.eg.GET("/mine", s.handleMine)
+	s.eg.GET("/mining", s.handleStartMining)
 	fmt.Println("server listening on", s.srv.Addr)
 	return s.srv.ListenAndServe()
 }
@@ -113,4 +114,10 @@ func (s *Server) handleMine(ctx *gin.Context) {
 	bc := s.GetBlockchain()
 	isMined := bc.Mining()
 	ctx.JSON(http.StatusOK, gin.H{"success": isMined})
+}
+
+func (s *Server) handleStartMining(ctx *gin.Context) {
+	bc := s.GetBlockchain()
+	go bc.StartMining()
+	ctx.JSON(http.StatusOK, gin.H{"success": true})
 }

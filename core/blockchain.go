@@ -8,12 +8,15 @@ import (
 	"github.com/matrix-go/bitcoin/utils"
 	"log"
 	"strings"
+	"sync"
+	"time"
 )
 
 const (
 	KMiningDifficulty = 3
 	KMiningSender     = "COINBASE"
 	KMiningReward     = 20
+	KMiningTimerSec   = 20
 )
 
 type Blockchain struct {
@@ -21,6 +24,7 @@ type Blockchain struct {
 	chain           []*Block
 	miner           string
 	port            int
+	mux             sync.Mutex
 }
 
 func NewBlockchain(miner string, port int) *Blockchain {
@@ -124,11 +128,24 @@ func (bc *Blockchain) ProofOfWork() int {
 }
 
 func (bc *Blockchain) Mining() bool {
+	bc.mux.Lock()
+	defer bc.mux.Unlock()
+
+	// TODO: in fact empty tx will also mining a new block
+	if len(bc.transactionPool) == 0 {
+		return false
+	}
+
 	bc.AddTransaction(KMiningSender, bc.miner, KMiningReward, nil, nil)
 	nonce := bc.ProofOfWork()
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
 	return true
+}
+
+func (bc *Blockchain) StartMining() {
+	_ = bc.Mining()
+	_ = time.AfterFunc(KMiningTimerSec*time.Second, bc.StartMining)
 }
 
 func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) int64 {
