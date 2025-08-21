@@ -9,6 +9,7 @@ import (
 	"github.com/matrix-go/bitcoin/server"
 	"github.com/matrix-go/bitcoin/utils"
 	"github.com/matrix-go/bitcoin/wallet"
+	"io"
 	"net/http"
 	"path"
 	"runtime"
@@ -50,6 +51,7 @@ func (s *Server) Start() error {
 	})
 	s.eg.POST("/wallet", s.handlePostCreateWallet)
 	s.eg.POST("/transaction", s.handlePostCreateTransaction)
+	s.eg.GET("/wallet/amount/:address", s.handleGetWalletAmount)
 	fmt.Println("server listening on", s.srv.Addr)
 	return s.srv.ListenAndServe()
 }
@@ -141,4 +143,35 @@ func (s *Server) handlePostCreateTransaction(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusCreated, gin.H{"success": true})
+}
+
+func (s *Server) handleGetWalletAmount(ctx *gin.Context) {
+	address := ctx.Param("address")
+	request, err := http.NewRequest(http.MethodGet, s.Gateway()+"/amount/"+address, nil)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": resp.Status})
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var res map[string]interface{}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, res)
 }

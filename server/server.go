@@ -51,6 +51,7 @@ func (s *Server) Start() error {
 	// TODO: just for test
 	s.eg.GET("/mine", s.handleMine)
 	s.eg.GET("/mining", s.handleStartMining)
+	s.eg.GET("/amount/:address", s.handleGetAmount)
 	fmt.Println("server listening on", s.srv.Addr)
 	return s.srv.ListenAndServe()
 }
@@ -120,4 +121,11 @@ func (s *Server) handleStartMining(ctx *gin.Context) {
 	bc := s.GetBlockchain()
 	go bc.StartMining()
 	ctx.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func (s *Server) handleGetAmount(ctx *gin.Context) {
+	address := ctx.Param("address")
+	bc := s.GetBlockchain()
+	amount := bc.CalculateTotalAmount(address)
+	ctx.JSON(http.StatusOK, gin.H{"success": true, "amount": amount})
 }

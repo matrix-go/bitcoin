@@ -39,12 +39,34 @@
                     contentType: "application/json",
                     success: function (response) {
                         console.log(response)
+                        alert("success")
                     },
                     error: function (err) {
                         console.error(err)
+                        alert("failed")
                     }
                 })
             })
+
+            function reload_amount() {
+                    $.ajax({
+                        url: "/wallet/amount/" + $("#address").val(),
+                        type: "GET",
+                        contentType: "application/json",
+                        success: function (response) {
+                            let amount = response["amount"]
+                            $("#wallet_amount").text(amount)
+                        },
+                        error: function (err) {
+                            console.error(err)
+                        }
+                    })
+            }
+            $("#reload_btn").click(function () {
+                reload_amount();
+            })
+
+            setInterval(reload_amount, 3000)
         })
     </script>
 </head>
