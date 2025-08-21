@@ -23,8 +23,14 @@ func main() {
 	//fmt.Printf("C: %d\n", bc.CalculateTotalAmount("C"))
 	//fmt.Printf("D: %d\n", bc.CalculateTotalAmount("D"))
 
-	w := wallet.NewWallet()
-	fmt.Println(w.PrivateKeyStr())
-	fmt.Println(w.PublicKeyStr())
-	fmt.Println(w.Address())
+	a := wallet.NewWallet()
+	fmt.Println(a.PrivateKeyStr())
+	fmt.Println(a.PublicKeyStr())
+	fmt.Println(a.Address())
+
+	b := wallet.NewWallet()
+	tx := wallet.NewTransaction(a.PrivateKey(), a.PublicKey(), a.Address(), b.Address(), 10)
+	fmt.Printf("tx ==> %v\n", tx)
+	sig := tx.GenerateSignature()
+	fmt.Printf("sig ==> %v\n", sig)
 }
