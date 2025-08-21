@@ -5,7 +5,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"github.com/btcsuite/btcutil/base58"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -61,7 +62,7 @@ func (w *Wallet) PrivateKey() *ecdsa.PrivateKey {
 }
 
 func (w *Wallet) PrivateKeyStr() string {
-	return hex.EncodeToString(w.privateKey.D.Bytes())
+	return fmt.Sprintf("%064x", w.privateKey.D.Bytes())
 }
 
 func (w *Wallet) PublicKey() *ecdsa.PublicKey {
@@ -69,9 +70,21 @@ func (w *Wallet) PublicKey() *ecdsa.PublicKey {
 }
 
 func (w *Wallet) PublicKeyStr() string {
-	return hex.EncodeToString(w.publicKey.X.Bytes()) + hex.EncodeToString(w.publicKey.Y.Bytes())
+	return fmt.Sprintf("%064x%064x", w.publicKey.X.Bytes(), w.publicKey.Y.Bytes())
 }
 
 func (w *Wallet) Address() string {
 	return w.address
+}
+
+func (w *Wallet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		PrivateKey string `json:"private_key"`
+		PublicKey  string `json:"public_key"`
+		Address    string `json:"address"`
+	}{
+		PrivateKey: w.PrivateKeyStr(),
+		PublicKey:  w.PublicKeyStr(),
+		Address:    w.Address(),
+	})
 }

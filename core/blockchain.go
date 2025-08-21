@@ -20,13 +20,15 @@ type Blockchain struct {
 	transactionPool []*Transaction
 	chain           []*Block
 	miner           string
+	port            int
 }
 
-func NewBlockchain(miner string) *Blockchain {
+func NewBlockchain(miner string, port int) *Blockchain {
 	bc := new(Blockchain)
 	bc.transactionPool = make([]*Transaction, 0)
 	bc.chain = make([]*Block, 0)
 	bc.miner = miner
+	bc.port = port
 
 	// TODO: genesis block
 	b := &Block{}
@@ -63,10 +65,10 @@ func (bc *Blockchain) AddTransaction(
 		return true
 	}
 	if bc.VerifyTransaction(senderPublicKey, sig, tx) {
-		if bc.CalculateTotalAmount(sender) < value {
-			log.Println("ERROR: Not Enough balance for the sender", sender)
-			return false
-		}
+		//if bc.CalculateTotalAmount(sender) < value {
+		//	log.Println("ERROR: Not Enough balance for the sender", sender)
+		//	return false
+		//}
 		bc.transactionPool = append(bc.transactionPool, tx)
 		return true
 	}
@@ -93,6 +95,10 @@ func (bc *Blockchain) CopyTransactionPool() []*Transaction {
 		)
 	}
 	return transactions
+}
+
+func (bc *Blockchain) GetTransactionPools() []*Transaction {
+	return bc.transactionPool
 }
 
 func (bc *Blockchain) VerifyProof(nonce int, previousHash [32]byte, transactions []*Transaction, difficulty int) bool {
@@ -138,6 +144,14 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) int64 {
 		}
 	}
 	return total
+}
+
+func (bc *Blockchain) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Blocks []*Block `json:"blocks"`
+	}{
+		Blocks: bc.chain,
+	})
 }
 
 func (bc *Blockchain) Print() {

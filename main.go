@@ -1,33 +1,33 @@
 package main
 
 import (
-	"fmt"
-	"github.com/matrix-go/bitcoin/core"
-	"github.com/matrix-go/bitcoin/wallet"
+	"flag"
+	"github.com/matrix-go/bitcoin/server"
+	"github.com/matrix-go/bitcoin/wallet_server"
+	"log"
+	"os"
+	"os/signal"
 )
 
 func main() {
+	port := flag.Int("port", 5000, "server port")
+	flag.Parse()
 
-	// Miner
-	walletM := wallet.NewWallet()
+	// wallet server
+	wserv := wallet_server.NewServer(8001)
+	go func() {
+		if err := wserv.Start(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
-	// A and B
-	walletA := wallet.NewWallet()
-	walletB := wallet.NewWallet()
+	// chain server
+	serv := server.NewServer(*port)
+	if err := serv.Start(); err != nil {
+		log.Fatal(err)
+	}
 
-	// tx
-	var amount int64 = 100
-	tx := wallet.NewTransaction(walletA.PrivateKey(), walletA.PublicKey(), walletA.Address(), walletB.Address(), amount)
-
-	// bc
-	bc := core.NewBlockchain(walletM.Address())
-
-	success := bc.AddTransaction(walletA.Address(), walletB.Address(), amount, walletA.PublicKey(), tx.GenerateSignature())
-	fmt.Println("is success", success)
-	bc.Mining()
-	bc.Print()
-
-	fmt.Printf("Miner: %d\n", bc.CalculateTotalAmount(walletM.Address()))
-	fmt.Printf("A: %d\n", bc.CalculateTotalAmount(walletA.Address()))
-	fmt.Printf("B: %d\n", bc.CalculateTotalAmount(walletB.Address()))
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
 }

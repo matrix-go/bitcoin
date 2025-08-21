@@ -2,6 +2,7 @@ package core
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -35,12 +36,12 @@ func (b *Block) Hash() [32]byte {
 func (b *Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Nonce        int            `json:"nonce"`
-		PreviousHash [32]byte       `json:"previous_hash"`
+		PreviousHash string         `json:"previous_hash"`
 		Timestamp    int64          `json:"timestamp"`
 		Transactions []*Transaction `json:"transactions"`
 	}{
 		Nonce:        b.nonce,
-		PreviousHash: b.previousHash,
+		PreviousHash: hex.EncodeToString(b.previousHash[:]),
 		Timestamp:    b.timestamp,
 		Transactions: b.transactions,
 	})
