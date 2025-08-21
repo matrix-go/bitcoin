@@ -2,35 +2,32 @@ package main
 
 import (
 	"fmt"
+	"github.com/matrix-go/bitcoin/core"
 	"github.com/matrix-go/bitcoin/wallet"
 )
 
 func main() {
 
-	//blockchainAddress := "miner"
-	//bc := core.NewBlockchain(blockchainAddress)
-	//bc.Print()
-	//
-	//bc.AddTransaction("A", "B", 10)
-	//bc.Mining()
-	//bc.Print()
-	//
-	//bc.AddTransaction("C", "D", 20)
-	//bc.AddTransaction("X", "Y", 30)
-	//bc.Mining()
-	//bc.Print()
-	//
-	//fmt.Printf("C: %d\n", bc.CalculateTotalAmount("C"))
-	//fmt.Printf("D: %d\n", bc.CalculateTotalAmount("D"))
+	// Miner
+	walletM := wallet.NewWallet()
 
-	a := wallet.NewWallet()
-	fmt.Println(a.PrivateKeyStr())
-	fmt.Println(a.PublicKeyStr())
-	fmt.Println(a.Address())
+	// A and B
+	walletA := wallet.NewWallet()
+	walletB := wallet.NewWallet()
 
-	b := wallet.NewWallet()
-	tx := wallet.NewTransaction(a.PrivateKey(), a.PublicKey(), a.Address(), b.Address(), 10)
-	fmt.Printf("tx ==> %v\n", tx)
-	sig := tx.GenerateSignature()
-	fmt.Printf("sig ==> %v\n", sig)
+	// tx
+	var amount int64 = 100
+	tx := wallet.NewTransaction(walletA.PrivateKey(), walletA.PublicKey(), walletA.Address(), walletB.Address(), amount)
+
+	// bc
+	bc := core.NewBlockchain(walletM.Address())
+
+	success := bc.AddTransaction(walletA.Address(), walletB.Address(), amount, walletA.PublicKey(), tx.GenerateSignature())
+	fmt.Println("is success", success)
+	bc.Mining()
+	bc.Print()
+
+	fmt.Printf("Miner: %d\n", bc.CalculateTotalAmount(walletM.Address()))
+	fmt.Printf("A: %d\n", bc.CalculateTotalAmount(walletA.Address()))
+	fmt.Printf("B: %d\n", bc.CalculateTotalAmount(walletB.Address()))
 }

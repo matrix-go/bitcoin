@@ -4,9 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"math/big"
+	"github.com/matrix-go/bitcoin/utils"
 )
 
 type Transaction struct {
@@ -33,11 +32,11 @@ func NewTransaction(
 	}
 }
 
-func (tx *Transaction) GenerateSignature() *Signature {
+func (tx *Transaction) GenerateSignature() *utils.Signature {
 	m, _ := json.Marshal(tx)
 	h := sha256.Sum256(m)
 	r, s, _ := ecdsa.Sign(rand.Reader, tx.senderPrivateKey, h[:])
-	return &Signature{
+	return &utils.Signature{
 		R: r,
 		S: s,
 	}
@@ -53,13 +52,4 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		Recipient: tx.recipientAddress,
 		Value:     tx.value,
 	})
-}
-
-type Signature struct {
-	R *big.Int
-	S *big.Int
-}
-
-func (sig *Signature) String() string {
-	return hex.EncodeToString(sig.R.Bytes()) + hex.EncodeToString(sig.S.Bytes())
 }

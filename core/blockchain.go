@@ -1,7 +1,12 @@
 package core
 
 import (
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"github.com/matrix-go/bitcoin/utils"
+	"log"
 	"strings"
 )
 
@@ -12,16 +17,16 @@ const (
 )
 
 type Blockchain struct {
-	transactionPool   []*Transaction
-	chain             []*Block
-	blockchainAddress string
+	transactionPool []*Transaction
+	chain           []*Block
+	miner           string
 }
 
-func NewBlockchain(blockchainAddress string) *Blockchain {
+func NewBlockchain(miner string) *Blockchain {
 	bc := new(Blockchain)
 	bc.transactionPool = make([]*Transaction, 0)
 	bc.chain = make([]*Block, 0)
-	bc.blockchainAddress = blockchainAddress
+	bc.miner = miner
 
 	// TODO: genesis block
 	b := &Block{}
@@ -42,9 +47,41 @@ func (bc *Blockchain) LastBlock() *Block {
 	return bc.chain[len(bc.chain)-1]
 }
 
-func (bc *Blockchain) AddTransaction(sender string, recipient string, value int64) {
+func (bc *Blockchain) AddTransaction(
+	sender string,
+	recipient string,
+	value int64,
+
+	senderPublicKey *ecdsa.PublicKey,
+	sig *utils.Signature,
+) bool {
+
 	tx := NewTransaction(sender, recipient, value)
-	bc.transactionPool = append(bc.transactionPool, tx)
+	if sender == KMiningSender {
+		// TODO: coinbase tx has no signature
+		bc.transactionPool = append(bc.transactionPool, tx)
+		return true
+	}
+	if bc.VerifyTransaction(senderPublicKey, sig, tx) {
+		if bc.CalculateTotalAmount(sender) < value {
+			log.Println("ERROR: Not Enough balance for the sender", sender)
+			return false
+		}
+		bc.transactionPool = append(bc.transactionPool, tx)
+		return true
+	}
+	log.Println("ERROR: AddTransaction Failed")
+	return false
+}
+
+func (bc *Blockchain) VerifyTransaction(
+	senderPublicKey *ecdsa.PublicKey,
+	sig *utils.Signature,
+	tx *Transaction,
+) bool {
+	m, _ := json.Marshal(tx)
+	hash := sha256.Sum256(m)
+	return ecdsa.Verify(senderPublicKey, hash[:], sig.R, sig.S)
 }
 
 func (bc *Blockchain) CopyTransactionPool() []*Transaction {
@@ -81,7 +118,7 @@ func (bc *Blockchain) ProofOfWork() int {
 }
 
 func (bc *Blockchain) Mining() bool {
-	bc.AddTransaction(KMiningSender, bc.blockchainAddress, KMiningReward)
+	bc.AddTransaction(KMiningSender, bc.miner, KMiningReward, nil, nil)
 	nonce := bc.ProofOfWork()
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
