@@ -33,6 +33,21 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *Transaction) UnmarshalJSON(b []byte) error {
+	var val struct {
+		Sender    string `json:"sender"`
+		Recipient string `json:"recipient"`
+		Value     int64  `json:"value"`
+	}
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+	t.sender = val.Sender
+	t.recipient = val.Recipient
+	t.value = val.Value
+	return nil
+}
+
 func (t *Transaction) Print() {
 	fmt.Printf(`%s
 sender         %s

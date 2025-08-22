@@ -32,6 +32,18 @@ func (b *Block) Hash() [32]byte {
 	return sha256.Sum256(m)
 }
 
+func (b *Block) PreviousHash() [32]byte {
+	return b.previousHash
+}
+
+func (b *Block) Nonce() int {
+	return b.nonce
+}
+
+func (b *Block) Transactions() []*Transaction {
+	return b.transactions
+}
+
 // MarshalJSON implement json.Marshaler
 func (b *Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
@@ -45,6 +57,24 @@ func (b *Block) MarshalJSON() ([]byte, error) {
 		Timestamp:    b.timestamp,
 		Transactions: b.transactions,
 	})
+}
+
+func (b *Block) UnmarshalJSON(data []byte) error {
+	var val struct {
+		Nonce        int            `json:"nonce"`
+		PreviousHash string         `json:"previous_hash"`
+		Timestamp    int64          `json:"timestamp"`
+		Transactions []*Transaction `json:"transactions"`
+	}
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+	b.nonce = val.Nonce
+	previousHash, _ := hex.DecodeString(val.PreviousHash)
+	b.previousHash = [32]byte(previousHash[:32])
+	b.timestamp = val.Timestamp
+	b.transactions = val.Transactions
+	return nil
 }
 
 func (b *Block) Print() {

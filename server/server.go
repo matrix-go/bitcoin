@@ -44,7 +44,10 @@ func (s *Server) GetBlockchain() *core.Blockchain {
 	return bc
 }
 
-func (s *Server) Start() error {
+func (s *Server) Run() error {
+	bc := s.GetBlockchain()
+	bc.Run()
+
 	s.eg.GET("/blockchain", s.handleGetBlockchain)
 	s.eg.POST("/transaction", s.handlePostAddTransaction)
 	s.eg.GET("/transactions", s.handleGetTransactions)

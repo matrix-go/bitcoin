@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/matrix-go/bitcoin/utils"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,12 @@ const (
 	KMiningSender     = "COINBASE"
 	KMiningReward     = 20
 	KMiningTimerSec   = 20
+
+	KBlockchainPortStart      = 5000
+	KBlockchainPortEnd        = 5003
+	KNeighborIPRangeStart     = 0
+	KNeighborIPRangeEnd       = 1
+	KBlockNeighborSyncTimeSec = 20
 )
 
 type Blockchain struct {
@@ -25,6 +32,9 @@ type Blockchain struct {
 	miner           string
 	port            int
 	mux             sync.Mutex
+
+	neighbors   []string
+	muxNeighbor sync.Mutex
 }
 
 func NewBlockchain(miner string, port int) *Blockchain {
@@ -40,12 +50,48 @@ func NewBlockchain(miner string, port int) *Blockchain {
 	return bc
 }
 
+func (bc *Blockchain) Run() {
+	bc.SyncNeighbors()
+}
+
+func (bc *Blockchain) ResolveConflicts() bool {
+	var longestChain []*Block
+	var maxLength = len(bc.chain)
+	for _, nb := range bc.neighbors {
+		endpoint := fmt.Sprintf("http://%s/blockchain", nb)
+		resp, _ := http.Get(endpoint)
+		if resp.StatusCode == http.StatusOK {
+			var blockchain Blockchain
+			_ = json.NewDecoder(resp.Body).Decode(&blockchain)
+			chain := blockchain.Chain()
+			if len(chain) > maxLength {
+				longestChain = chain
+				maxLength = len(longestChain)
+			}
+		}
+	}
+	if longestChain != nil {
+		bc.chain = longestChain
+		log.Printf("Resolve conflicts with replace chain - chain length: %d\n", len(longestChain))
+		return true
+	}
+	log.Printf("Resolve conflicts not replace chain\n")
+	return false
+}
+
 func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	b := NewBlock(nonce, previousHash, bc.transactionPool)
 	bc.chain = append(bc.chain, b)
 
 	// TODO: transaction
 	bc.transactionPool = make([]*Transaction, 0)
+	for _, neighbor := range bc.neighbors {
+		endpoint := fmt.Sprintf("http://%s/transactions", neighbor)
+		req, _ := http.NewRequest("DELETE", endpoint, nil)
+		req.Header.Add("Content-Type", "application/json")
+		resp, _ := http.DefaultClient.Do(req)
+		log.Printf("%v\n", resp)
+	}
 	return b
 }
 
@@ -163,12 +209,63 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) int64 {
 	return total
 }
 
+func (bc *Blockchain) SetNeighbors() {
+	bc.neighbors = utils.FindNeighbors(
+		utils.GetHost(), bc.port,
+		KNeighborIPRangeStart, KNeighborIPRangeEnd,
+		KBlockchainPortStart, KBlockchainPortEnd,
+	)
+}
+
+func (bc *Blockchain) SyncNeighbors() {
+	bc.muxNeighbor.Lock()
+	defer bc.muxNeighbor.Unlock()
+	bc.SetNeighbors()
+}
+
+func (bc *Blockchain) StartSyncNeighbors() {
+	bc.SyncNeighbors()
+	_ = time.AfterFunc(time.Second*KBlockNeighborSyncTimeSec, bc.StartSyncNeighbors)
+}
+
+func (bc *Blockchain) ValidChain(chain []*Block) bool {
+	prevBlock := chain[0]
+	currentIndex := 1
+	for currentIndex < len(chain) {
+		block := chain[currentIndex]
+		if block.previousHash != prevBlock.Hash() {
+			return false
+		}
+		if !bc.VerifyProof(block.nonce, block.previousHash, block.transactions, KMiningDifficulty) {
+			return false
+		}
+		prevBlock = block
+		currentIndex++
+	}
+	return true
+}
+
+func (bc *Blockchain) Chain() []*Block {
+	return bc.chain
+}
+
 func (bc *Blockchain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Blocks []*Block `json:"blocks"`
 	}{
 		Blocks: bc.chain,
 	})
+}
+
+func (bc *Blockchain) UnmarshalJSON(data []byte) error {
+	var val struct {
+		Blocks []*Block `json:"blocks"`
+	}
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+	bc.chain = val.Blocks
+	return nil
 }
 
 func (bc *Blockchain) Print() {
