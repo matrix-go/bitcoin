@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        $(function () {
+            $.ajax({
+                url: "/wallet",
+                type: "POST",
+                success: function (response) {
+                    $("#public_key").val(response["public_key"])
+                    $("#private_key").val(response["private_key"])
+                    $("#address").val(response["address"])
+                },
+                error: function (err) {
+                    console.error(err)
+                }
+            })
+            $("#send").click(function () {
+                let sender_private_key = $("#private_key").val()
+                let sender_public_key = $("#public_key").val()
+                let sender_address = $("#address").val()
+                let recipient_address = $("#receipt").val()
+                let amount = $("#amount").val()
+                let data = JSON.stringify({
+                    sender_private_key,
+                    sender_public_key,
+                    sender_address,
+                    recipient_address,
+                    amount,
+                })
+                console.log(data)
+                $.ajax({
+                    url: "/transaction",
+                    type: "POST",
+                    data: data,
+                    contentType: "application/json",
+                    success: function (response) {
+                        console.log(response)
+                        alert("success")
+                    },
+                    error: function (err) {
+                        console.error(err)
+                        alert("failed")
+                    }
+                })
+            })
+
+            function reload_amount() {
+                    $.ajax({
+                        url: "/wallet/amount/" + $("#address").val(),
+                        type: "GET",
+                        contentType: "application/json",
+                        success: function (response) {
+                            let amount = response["amount"]
+                            $("#wallet_amount").text(amount)
+                        },
+                        error: function (err) {
+                            console.error(err)
+                        }
+                    })
+            }
+            $("#reload_btn").click(function () {
+                reload_amount();
+            })
+
+            setInterval(reload_amount, 3000)
+        })
+    </script>
+</head>
+<body>
+    <div>
+        <h1>Wallet</h1>
+        <div id="wallet_amount">0</div>
+        <button id="reload_btn">Reload Wallet</button>
+        <p>Public Key</p>
+        <textarea id="public_key" rows="2" cols="100"></textarea>
+        <p>Private Key</p>
+        <textarea id="private_key" rows="1" cols="100"></textarea>
+        <p>Address</p>
+        <textarea id="address" rows="1" cols="100"></textarea>
+    </div>
+    <div>
+        <h1>Send Money</h1>
+        <div>
+            <label for="receipt">Address: </label><input id="receipt" size="100" type="text"><br/>
+            <label for="amount">Amount: </label><input id="amount" size="100" type="text"><br/>
+        </div>
+        <button id="send">Send</button>
+    </div>
+</body>
+</html>
